@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scalable Backend Demo</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        .card { border: 1px solid #ddd; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; }
+        .hidden { display: none; }
+        button { cursor: pointer; padding: 5px 10px; }
+        input { padding: 5px; margin: 5px 0; }
+        .log { background: #f4f4f4; padding: 10px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>System Dashboard</h1>
+    
+    <div id="auth-section" class="card">
+        <h2>Authentication</h2>
+        <input type="email" id="email" placeholder="Email" value="admin@example.com">
+        <input type="password" id="password" placeholder="Password" value="123456">
+        <select id="role"><option value="user">User</option><option value="admin">Admin</option></select>
+        <br>
+        <button onclick="login()">Login</button>
+        <button onclick="register()">Register</button>
+        <button onclick="logout()" style="background: #ffcccc">Logout</button>
+        <p id="auth-status">Status: Not logged in</p>
+    </div>
+
+    <div id="task-section" class="card hidden">
+        <h2>Task Management (Protected)</h2>
+        <button onclick="fetchTasks()">Fetch Tasks</button>
+        <div style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 10px;">
+            <h3>Create Task (Admin Only)</h3>
+            <input type="text" id="taskTitle" placeholder="Task Title">
+            <button onclick="createTask()">Create</button>
+        </div>
+        <ul id="taskList"></ul>
+    </div>
+
+    <div class="card">
+        <h3>Server Response Log</h3>
+        <div id="logs" class="log"></div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:3000/api/v1'; // Backend API
+        let token = localStorage.getItem('token');
+
+        function updateUI() {
+            const authSection = document.getElementById('task-section');
+            const status = document.getElementById('auth-status');
+            if (token) {
+                authSection.classList.remove('hidden');
+                status.innerText = `Status: Logged in (Token: ${token.substring(0, 15)}...)`;
+                fetchTasks();
+            } else {
+                authSection.classList.add('hidden');
+                status.innerText = 'Status: Not logged in';
+                document.getElementById('taskList').innerHTML = '';
+            }
+        }
+
+        async function req(endpoint, method = 'GET', body = null) {
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            
+            try {
+                const res = await fetch(`${API}${endpoint}`, {
+                    method,
+                    headers,
+                    body: body ? JSON.stringify(body) : null
+                });
+                const data = await res.json();
+                logResponse(endpoint, data);
+                if (res.status === 401) logout();
+                return data;
+            } catch (err) {
+                logResponse(endpoint, { error: err.message });
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const res = await req('/auth/login', 'POST', { email, password });
+            if (res.success !== false) {
+                token = res.data.token;
+                localStorage.setItem('token', token);
+                updateUI();
+            } else {
+                alert(res.message);
+            }
+        }
+
+        async function register() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+            const res = await req('/auth/register', 'POST', { username: 'testuser', email, password, role });
+            if (res.success !== false) {
+                alert('Registered! Please login.');
+            } else {
+                alert(res.message);
+            }
+        }
+
+        function logout() {
+            token = null;
+            localStorage.removeItem('token');
+            updateUI();
+        }
+
+        async function fetchTasks() {
+            const res = await req('/tasks');
+            const list = document.getElementById('taskList');
+            list.innerHTML = '';
+            if (res.data) {
+                res.data.forEach(t => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `${t.title} <button onclick="deleteTask('${t.id}')">X</button>`;
+                    list.appendChild(li);
+                });
+            }
+        }
+
+        async function createTask() {
+            const title = document.getElementById('taskTitle').value;
+            await req('/tasks', 'POST', { title });
+            fetchTasks();
+        }
+
+        async function deleteTask(id) {
+            await req(`/tasks/${id}`, 'DELETE');
+            fetchTasks();
+        }
+
+        function logResponse(url, data) {
+            const logDiv = document.getElementById('logs');
+            logDiv.innerHTML = `<div><strong>${new Date().toLocaleTimeString()} - ${url}</strong><pre>${JSON.stringify(data, null, 2)}</pre></div>` + logDiv.innerHTML;
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
