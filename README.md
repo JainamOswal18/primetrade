@@ -141,6 +141,49 @@ PrimeTrade/
 2. **Redis:** Optional—app works without Redis (caching disabled)
 
 3. **Database:** SQLite file auto-created on first run
+
+4. **Production:** Use Docker for deployment:
+   ```bash
+   cd server && docker-compose up -d --build --scale api=2
+   ```
+
+---
+
+## 💻 Development Commands
+
+```bash
+# Stop servers
+./stop.sh
+
+# View logs
+tail -f server.log    # Backend logs
+tail -f client.log    # Frontend logs
+
+# Manual restart
+cd server && bun run dev    # Terminal 1
+cd client && bun run dev    # Terminal 2
+
+# Docker deployment
+cd server && docker-compose up -d --build --scale api=2
+```
+
+---
+
+## 🏗️ Architecture Highlights
+
+- **SQLite WAL Mode:** Enables concurrent readers + single writer (4,000 writes/sec)
+- **Redis Caching:** Cache-aside pattern with 60s TTL (25x faster responses)
+- **JWT + RBAC:** Stateless authentication with role-based authorization
+- **Docker + Nginx:** Horizontal scaling with load balancing
+- **Winston Logging:** Structured JSON logs with daily rotation
+- **Swagger Docs:** Interactive API documentation
+
+**📚 For in-depth technical details, see [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md)**
+
+---
+
+## 🐛 Troubleshooting
+
 ```bash
 # Port already in use
 lsof -ti:3000 | xargs kill -9
@@ -174,45 +217,3 @@ MIT
 ---
 
 **Built with ❤️ to demonstrate production-ready backend engineering**
-
-**Database locked:**
-```bash
-# Remove SQLite database and restart
-rm server/database.sqlite
-```
-
-## 📄 License
-
-MIT
-� Development Commands
-
-```bash
-# Stop servers
-./stop.sh
-
-# View logs
-tail -f server.log    # Backend logs
-tail -f client.log    # Frontend logs
-
-# Manual restart
-cd server && bun run dev    # Terminal 1
-cd client && bun run dev    # Terminal 2
-
-# Docker deployment
-cd server && docker-compose up -d --build --scale api=2
-```
-
----
-
-## 🏗️ Architecture Highlights
-
-- **SQLite WAL Mode:** Enables concurrent readers + single writer (4,000 writes/sec)
-- **Redis Caching:** Cache-aside pattern with 60s TTL (25x faster responses)
-- **JWT + RBAC:** Stateless authentication with role-based authorization
-- **Docker + Nginx:** Horizontal scaling with load balancing
-- **Winston Logging:** Structured JSON logs with daily rotation
-- **Swagger Docs:** Interactive API documentation
-
-**📚 For in-depth technical details, see [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md)**
-
----
